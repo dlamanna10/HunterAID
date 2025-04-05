@@ -10,16 +10,24 @@ class Document:
     content: str
     metadata: dict
 
-def scrape_monster_hunter_wiki():
+def scrape_test_pages():
     site = mwclient.Site('monsterhunter.fandom.com', path='/')
+    test_titles = [
+        "Rathalos",
+        "Great Sword",
+        "Armor",
+        "Rajang",
+        "Monster Hunter World"
+    ]
+
     documents = []
 
-    for page in site.allpages():
-        title = page.name
+    for title in test_titles:
         try:
+            page = site.pages[title]
             content = page.text()
-        except:
-            print(f"Failed to scrape: {title}")
+        except Exception as e:
+            print(f"✗ Failed to scrape: {title} — {e}")
             continue
 
         url = f"https://monsterhunter.fandom.com/wiki/{title.replace(' ', '_')}"
@@ -29,11 +37,11 @@ def scrape_monster_hunter_wiki():
             metadata={"url": url, "source": "web"}
         )
         documents.append(doc)
-        print(f"Scraped: {title}")
+        print(f"✓ Scraped: {title}")
 
     return documents
 
-def save_documents_to_jsonl(documents, filename="data/docs.jsonl"):
+def save_documents_to_jsonl(documents, filename="data/test/test_docs.jsonl"):
     os.makedirs("data", exist_ok=True)
     with open(filename, "w", encoding="utf-8") as f:
         for doc in documents:
@@ -46,5 +54,5 @@ def save_documents_to_jsonl(documents, filename="data/docs.jsonl"):
     print(f"Saved {len(documents)} documents to {filename}")
 
 if __name__ == "__main__":
-    docs = scrape_monster_hunter_wiki()
+    docs = scrape_test_pages()
     save_documents_to_jsonl(docs)

@@ -1,4 +1,24 @@
-# .gitignore
+# Python
 venv/
 __pycache__/
 *.pyc
+
+# Environment
+.env
+.env.local
+
+# FastAPI Data
+data/raw/
+data/processed/
+data/test/
+data/dev_models/
+*.jsonl
+
+# Node/Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+
+# Misc
+.DS_Store
+Thumbs.db

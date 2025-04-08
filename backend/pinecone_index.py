@@ -10,7 +10,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 index = pc.Index(os.getenv("PINECONE_INDEX"))
 
-TOP_K = 4
+TOP_K = 3
 MAX_CHUNK_CHARS = 500
 
 def embed_query(text):

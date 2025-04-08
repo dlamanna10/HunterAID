@@ -1,36 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
   const [question, setQuestion] = useState("");
-  const [game, setGame] = useState("All Games");
   const [response, setResponse] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
+  const [chatHistory, setChatHistory] = useState<
+    { question: string; answer: string; sources: string[]; time: string }[]
+  >([]);
   const [loading, setLoading] = useState(false);
-
-  const games = [
-    { value: "Monster Hunter World", label: "World (Iceborn)" },
-    { value: "Monster Hunter World: Iceborne", label: "World" },
-    { value: "Monster Hunter Rise", label: "Rise" },
-    { value: "Monster Hunter Rise: Sunbreak", label: "Rise (Sunbreak)" },
-    { value: "Monster Hunter Wilds", label: "Wilds" },
-    { value: "Monster Hunter Generations", label: "Generations" },
-    { value: "Monster Hunter Generations Ultimate", label: "Gen. Ultimate" },
-    { value: "Monster Hunter", label: "MH1" },
-    { value: "Monster Hunter Freedom", label: "Freedom" },
-    { value: "Monster Hunter Freedom Unite", label: "Freedom Unite" },
-    { value: "Monster Hunter 2", label: "MH2" },
-    { value: "Monster Hunter Portable 3rd", label: "Portable 3rd" },
-    { value: "Monster Hunter 3 Ultimate", label: "MH3U" },
-    { value: "Monster Hunter 4", label: "MH4" },
-    { value: "Monster Hunter 4 Ultimate", label: "MH4U" },
-    { value: "Monster Hunter Stories", label: "Stories" },
-    { value: "Monster Hunter Stories 2: Wings of Ruin", label: "Stories 2" },
-    { value: "Monster Hunter Frontier", label: "Frontier" },
-    { value: "Monster Hunter Explore", label: "Explore" },
-    { value: "Monster Hunter Online", label: "Online" },
-    { value: "All", label: "All Games" }
-  ];
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const ask = async () => {
     if (!question.trim()) return;
@@ -44,78 +24,132 @@ export default function Home() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        question,
-        game: game === "All Games" ? null : game // send null if not filtered
-      })
+      body: JSON.stringify({ question })
     });
 
     const data = await res.json();
-    setResponse(data.answer);
-    setSources(data.sources);
+
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    setChatHistory((prev) => [
+      ...prev,
+      {
+        question,
+        answer: data.answer,
+        sources: data.sources,
+        time: timestamp
+      }
+    ]);
+
+    setQuestion("");
     setLoading(false);
   };
 
+  const clearChat = () => {
+    setChatHistory([]);
+    setResponse(null);
+    setSources([]);
+  };
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
   return (
-    <main className="p-10 max-w-2xl mx-auto text-white">
-      <img
-        src="/HunterAIDLogo.svg"
-        alt="HunterAID Logo"
-        className="w-70 h-auto mb-6"
-      />
-      {/* Question input */}
-      <input
-        type="text"
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        placeholder="Ask a Monster Hunter question..."
-        className="w-full p-3 mb-4 rounded bg-zinc-800 border border-zinc-700"
-      />
+    <div className="flex flex-col h-screen bg-black text-white font-sans">
+      {/* Header */}
+      <header className="flex justify-between items-center p-4 border-b border-zinc-800">
+        <img
+          src="/HunterAIDLogo.svg"
+          alt="HunterAID Logo"
+          className="w-44 h-auto"
+        />
+        {chatHistory.length > 0 && (
+          <button
+            onClick={clearChat}
+            className="bg-zinc-700 text-sm hover:bg-red-700 px-3 py-1 rounded border border-red-500"
+          >
+            Clear Chat
+          </button>
+        )}
+      </header>
 
-      {/* Game selector */}
-      <select
-        value={game}
-        onChange={(e) => setGame(e.target.value)}
-        className="w-full p-3 mb-4 rounded bg-zinc-800 border border-zinc-700"
+      {/* Chat area */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-2xl mx-auto w-full"
       >
-        {games.map((g, idx) => (
-          <option key={idx} value={g.value}>
-            {g.label}
-          </option>
-        ))}
-      </select>
+        {chatHistory.map((entry, idx) => (
+          <div key={idx} className="flex flex-col gap-2">
+            <div className="text-xs text-zinc-500">{entry.time}</div>
 
-      {/* Ask button */}
-      <button
-        onClick={ask}
-        className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded font-semibold"
-      >
-        {loading ? "Thinking..." : "Ask"}
-      </button>
-
-      {/* Response */}
-      {response && (
-        <>
-          <div className="mt-8 bg-zinc-900 p-4 rounded border border-zinc-700">
-            <h2 className="text-xl font-semibold mb-2">💬 Answer</h2>
-            <p className="whitespace-pre-line">{response}</p>
-          </div>
-          {sources.length > 0 && (
-            <div className="mt-4">
-              <h3 className="font-semibold mb-1">🔗 Sources</h3>
-              <ul className="list-disc list-inside text-blue-400">
-                {sources.map((src, i) => (
-                  <li key={i}>
-                    <a href={src} target="_blank" rel="noopener noreferrer">
-                      {src}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+            <div className="self-start bg-zinc-800 px-4 py-2 rounded-xl border border-zinc-600 max-w-fit shadow-md">
+              <span className="text-red-400 font-semibold">You:</span>{" "}
+              {entry.question}
             </div>
-          )}
-        </>
-      )}
-    </main>
+
+            <div className="self-end bg-zinc-900 px-4 py-3 rounded-xl border border-zinc-700 shadow-md w-fit max-w-full">
+              <p className="whitespace-pre-line">{entry.answer}</p>
+              {entry.sources.length > 0 && (
+                <ul className="mt-2 list-disc pl-4 text-blue-400 text-sm">
+                  {entry.sources.map((src, i) => (
+                    <li key={i}>
+                      <a
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                      >
+                        {src}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Input box fixed at bottom */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          ask();
+        }}
+        className="border-t border-zinc-800 p-4 bg-black"
+      >
+        <div className="max-w-2xl mx-auto flex gap-2">
+          <input
+            type="text"
+            ref={inputRef}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Ask a Monster Hunter question..."
+            className="flex-1 p-3 rounded bg-zinc-800 border border-zinc-700 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded font-semibold disabled:opacity-50"
+          >
+            {loading ? (
+              <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+            ) : (
+              "Ask"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
